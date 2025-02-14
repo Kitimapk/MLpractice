@@ -1,0 +1,58 @@
+# load R libraries
+library(tidyverse)
+library(dplyr)
+
+# load data
+churn <- data.frame(read.csv("Churn-Dataset.csv"))
+head(churn)
+
+
+# change datatype of label (Churn) into factor
+churn$Churn <- factor(churn$Churn,
+                         levels = c("No","Yes"))
+churn %>% head()
+str(churn)
+
+# recheck label class and number of Yes and No
+class(churn$Churn)
+table(churn$Churn)
+
+# data summary and filter out the row with NA value
+summary(churn)
+sum(is.na(churn))
+churn = filter(churn, TotalCharges != 0)
+sum(is.na(churn))
+
+
+# Split data to train test at ration 80:20
+set.seed(89)
+n <- nrow(churn)
+id <- sample(1:n, size = n*0.8)
+train_data <- churn[id, ]
+test_data <- churn[-id, ]
+
+
+# Train model using simple logistic regression algorithm with only numeric features
+logit_model <- glm(Churn ~ tenure + MonthlyCharges + TotalCharges + numTechTickets + numAdminTickets, data = train_data, family = "binomial")
+
+# set the probability of train in fraction and simply assigned to pred column in term of Ye and No
+p_train <- predict(logit_model, type = "response")
+train_data$pred <- if_else(p_train >= 0.5, "Yes", "No")
+
+# simply check if the actual churn match with prediction from model and find the average which is simply calculation of accuracy
+train_data$Churn == train_data$pred
+mean(train_data$Churn == train_data$pred)
+
+# create confusion matrix by hand calculation
+conM <- table(train_data$pred, train_data$Churn, dnn = c("Predicted", "Actual"))
+
+#model evaluation
+cat("Accuracy:", (conM[1,1] + conM[2,2]) / sum(conM))
+cat("Presision:", conM[2,2] / (conM[2,1]+conM[2,2]))
+cat("Recall:", cinM[2,2]/(conM[1,2]+conM[2,2]))
+
+
+# Test model and find accuracy
+p_test <- predict(logit_model, newdata = test_data, type = "response")
+test_data$pred <- if_else(p_test >=0.5, "Yes", "No")
+(mean(test_data$Churn == test_data$pred))
